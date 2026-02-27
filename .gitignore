@@ -1,0 +1,12 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Raw Data
+data/raw/
+*.csv
+*.xlsx
+*.json
+*.db
