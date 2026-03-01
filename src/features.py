@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+from src.db import get_engine, schema_name
+import os
 import numpy as np
 import pandas as pd
 
+USE_DB = os.getenv("USE_DB", "0") == "1"
 IN_PATH = Path("data/processed/base_weekly.parquet")
 OUT_PATH = Path("data/processed/modeling_weekly.parquet")
 
+if USE_DB:
+    engine = get_engine()
+    schema = schema_name()
+    df = pd.read_sql(f"SELECT * FROM {schema}.base_weekly ORDER BY date", engine)
+else:
+    df = pd.read_parquet(IN_PATH)
 
 def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -100,11 +109,17 @@ def main() -> None:
     df = pd.read_parquet(IN_PATH)
     df["date"] = pd.to_datetime(df["date"])
 
+    engine = get_engine()
+    schema = schema_name()
+    
+
     feats = make_features(df)
     modeling = drop_warmup(feats)
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     modeling.to_parquet(OUT_PATH, index=False)
+    modeling.to_sql("modeling_weekly", engine, schema=schema, if_exists="replace", index=False)
+    print("Wrote modeling_weekly to Postgres.")
 
     print(f"Input rows: {len(df)}")
     print(f"Modeling rows (after warmup drop): {len(modeling)}")

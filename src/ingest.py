@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from src.db import get_engine, schema_name
+
 import pandas as pd
 
 RAW_GAS_PATH = Path("../data/raw/gas_weekly.csv")
@@ -81,7 +83,12 @@ def save_parquet(df: pd.DataFrame, out_path: Path = OUT_PATH) -> None:
 def main() -> None:
     gas_raw = load_gas()
     wti_raw = load_wti()
+    engine = get_engine()
+    schema = schema_name()
 
+    gas.to_sql("raw_gas_weekly", engine, schema=schema, if_exists="replace", index=False)
+    wti.to_sql("raw_wti_daily", engine, schema=schema, if_exists="replace", index=False)
+    
     gas, wti = clean_and_standardize(gas_raw, wti_raw)
     base = align_wti_to_gas_dates(gas, wti)
 
@@ -91,6 +98,9 @@ def main() -> None:
     print("\nNull rate:")
     print(base.isna().mean().to_string())
 
+    base.to_sql("base_weekly", engine, schema=schema, if_exists="replace", index=False)
+
+    print("Wrote raw + base tables to Postgres.")
 
 if __name__ == "__main__":
     main()

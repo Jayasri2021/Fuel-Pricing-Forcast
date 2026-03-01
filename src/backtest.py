@@ -4,6 +4,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xgboost as xgb
+import uuid
+from src.db import get_engine, schema_name
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 DATA_PATH = Path("data/processed/modeling_weekly.parquet")
@@ -147,6 +149,18 @@ def main() -> None:
 
     metrics_df = pd.DataFrame(metrics_rows)
     metrics_df.to_csv(METRICS_PATH, index=False)
+
+    run_id = str(uuid.uuid4())
+    pred_df.insert(0, "run_id", run_id)
+    metrics_df.insert(0, "run_id", run_id)
+
+    engine = get_engine()
+    schema = schema_name()
+
+    pred_df.to_sql("backtest_predictions", engine, schema=schema, if_exists="append", index=False)
+    metrics_df.to_sql("backtest_metrics", engine, schema=schema, if_exists="append", index=False)
+
+    print(f"Wrote backtest outputs to Postgres with run_id={run_id}")
 
     # Print overall summary across all windows
     print(f"Saved predictions: {PRED_PATH} ({len(pred_df)} rows)")
