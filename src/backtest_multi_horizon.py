@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from src.db import get_engine, schema_name
 import json
+import uuid
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -22,6 +24,8 @@ VALID_WEEKS = 8
 N_ESTIMATORS = 600
 EARLY_STOPPING_ROUNDS = 50
 TREE_METHOD = "hist"
+
+run_id = str(uuid.uuid4())
 
 
 def smape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -64,13 +68,21 @@ def fit_xgb(
         n_jobs=-1,
     )
     if X_valid is not None and y_valid is not None:
-        model.fit(
-            X_train,
-            y_train,
-            eval_set=[(X_valid, y_valid)],
-            early_stopping_rounds=EARLY_STOPPING_ROUNDS,
-            verbose=False,
-        )
+        try:
+            model.fit(
+                X_train,
+                y_train,
+                eval_set=[(X_valid, y_valid)],
+                early_stopping_rounds=EARLY_STOPPING_ROUNDS,
+                verbose=False,
+            )
+        except TypeError:
+            model.fit(
+                X_train,
+                y_train,
+                eval_set=[(X_valid, y_valid)],
+                verbose=False,
+            )
     else:
         model.fit(X_train, y_train)
     return model
@@ -187,8 +199,19 @@ def main() -> None:
     pred_df.to_csv(PRED_PATH, index=False)
     metrics_df.to_csv(METRICS_PATH, index=False)
 
+    pred_df.insert(0, "run_id", run_id)
+    metrics_df.insert(0, "run_id", run_id)
+
+    engine = get_engine()
+    schema = schema_name()
+
+    pred_df.to_sql("backtest_multi_horizon_predictions", engine, schema=schema, if_exists="append", index=False)
+    metrics_df.to_sql("backtest_multi_horizon_metrics_summary", engine, schema=schema, if_exists="append", index=False)
+
     print(f"Saved predictions: {PRED_PATH} ({len(pred_df)} rows)")
     print(f"Saved metrics:     {METRICS_PATH} ({len(metrics_df)} rows)")
+
+    print(f"✅ Wrote backtest outputs to Postgres (run_id={run_id})")
 
     print("\nOverall metrics (mean across windows):")
     summary = (

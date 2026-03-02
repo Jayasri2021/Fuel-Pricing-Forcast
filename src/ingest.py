@@ -5,9 +5,10 @@ from src.db import get_engine, schema_name
 
 import pandas as pd
 
-RAW_GAS_PATH = Path("../data/raw/gas_weekly.csv")
-RAW_WTI_PATH = Path("../data/raw/wti_daily.csv")
-OUT_PATH = Path("../data/processed/base_weekly.parquet")
+BASE_DIR = Path(__file__).resolve().parents[1]
+RAW_GAS_PATH = BASE_DIR / "data" / "raw" / "gas_weekly.csv"
+RAW_WTI_PATH = BASE_DIR / "data" / "raw" / "wti_daily.csv"
+OUT_PATH = BASE_DIR / "data" / "processed" / "base_weekly.parquet"
 
 GAS_DATE_COL = "Week of"
 GAS_VALUE_COL = "Weekly U.S. All Grades All Formulations Retail Gasoline Prices Dollars per Gallon"
@@ -86,8 +87,8 @@ def main() -> None:
     engine = get_engine()
     schema = schema_name()
 
-    gas.to_sql("raw_gas_weekly", engine, schema=schema, if_exists="replace", index=False)
-    wti.to_sql("raw_wti_daily", engine, schema=schema, if_exists="replace", index=False)
+    gas_raw.to_sql("raw_gas_weekly", engine, schema=schema, if_exists="replace", index=False)
+    wti_raw.to_sql("raw_wti_daily", engine, schema=schema, if_exists="replace", index=False)
     
     gas, wti = clean_and_standardize(gas_raw, wti_raw)
     base = align_wti_to_gas_dates(gas, wti)

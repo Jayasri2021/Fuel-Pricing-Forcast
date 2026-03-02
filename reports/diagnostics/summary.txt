@@ -1,0 +1,11 @@
+Overall MAE - Naive (recursive): 0.0984
+Overall MAE - XGBoost (direct multi-horizon): 0.0573
+Relative improvement: 41.8%
+
+Horizon-wise MAE:
+              abs_err_naive  abs_err_xgb
+horizon_step                            
+1                  0.060992     0.049433
+2                  0.088540     0.057923
+3                  0.111674     0.058955
+4                  0.132524     0.062711
