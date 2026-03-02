@@ -7,7 +7,7 @@ ENV/
 
 # Raw Data
 data/raw/
-*.csv
+# *.csv
 *.xlsx
 *.json
 *.db
